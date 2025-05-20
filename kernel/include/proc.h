@@ -84,6 +84,7 @@ pagetable_t proc_pagetable(struct proc *);
 void proc_freepagetable(pagetable_t, uint64);
 int kill(int);
 struct cpu *mycpu(void);
+int mycpuid(void);
 struct cpu *getmycpu(void);
 struct proc *myproc();
 void procinit(void);

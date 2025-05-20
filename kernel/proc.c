@@ -49,6 +49,7 @@ void reg_info(void)
 // 初始化保护 PID 和每个 proc 的自旋锁
 void procinit(void)
 {
+    memset(proc, 0, sizeof(proc));
     struct proc *p;
     initlock(&pid_lock, "nextpid");
 
@@ -64,6 +65,14 @@ void procinit(void)
 int cpuid()
 {
     int id = r_tp();
+    return id;
+}
+
+int mycpuid(void)
+{
+    push_off();
+    int id = cpuid();
+    pop_off();
     return id;
 }
 

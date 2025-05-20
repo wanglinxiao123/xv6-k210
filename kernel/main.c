@@ -52,10 +52,11 @@ void main(unsigned long hartid, unsigned long dtb_pa)
         dmac_init();      // 调用 SDK 初始化 DMA
         disk_init();      // 初始化 SD 卡为 SPI 模式
         binit();          // 构建双向环形链表，初始化每一个buf的睡眠锁
-        fileinit();       // file table
+        fileinit();       // 初始化文件描述符列表和自旋锁
         userinit();       // 为 init 进程分配资源、映射物理页面到 pagetable 和 kpagetable
         printf("hart 0 init done\n");
 
+        // 向其他的核发送 IPI
         for (int i = 1; i < NCPU; i++)
         {
             unsigned long mask = 1 << i;

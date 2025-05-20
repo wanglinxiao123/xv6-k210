@@ -140,7 +140,7 @@ void printf(char *fmt, ...)
 // 触发异常的情况
 void panic(char *s)
 {
-    printf("panic: ");
+    printf("kernel panic: ");
     printf(s);
     printf("\n");
     backtrace();
@@ -167,5 +167,5 @@ void backtrace()
 // 打印 LOGO
 void print_logo()
 {
-    printf("WELCOME TO XV6-K210\n");
+    printf("WELCOME TO XV6-K210 IMPROVE BY WANGLINXIAO\n");
 }

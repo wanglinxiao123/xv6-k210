@@ -33,9 +33,10 @@ void acquire(struct spinlock *lk)
 
 // 释放自旋锁
 void release(struct spinlock *lk)
-{
-    if (!holding(lk))
+{   
+    if (!holding(lk)){
         panic("release");
+    }
 
     lk->cpu = 0;
     __sync_synchronize();

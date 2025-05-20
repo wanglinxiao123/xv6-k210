@@ -73,7 +73,7 @@ LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
-CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb -g -Wno-error=infinite-recursion
+CFLAGS = -Wall -Werror -O0 -fno-omit-frame-pointer -ggdb -g -Wno-error=infinite-recursion
 CFLAGS += -MD
 CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
@@ -204,12 +204,6 @@ UPROGS=\
 	$U/_usertests\
 	$U/_strace\
 	$U/_mv\
-
-	# $U/_forktest\
-	# $U/_ln\
-	# $U/_stressfs\
-	# $U/_grind\
-	# $U/_zombie\
 
 userprogs: $(UPROGS)
 
