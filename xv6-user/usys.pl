@@ -41,3 +41,5 @@ entry("remove");
 entry("trace");
 entry("sysinfo");
 entry("rename");
+entry("i2c_write");
+

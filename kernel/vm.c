@@ -33,6 +33,10 @@ void kvminit()
     kvmmap(SPI2_V, SPI2, 0x1000, PTE_R | PTE_W);
     kvmmap(SYSCTL_V, SYSCTL, 0x1000, PTE_R | PTE_W);
 
+    kvmmap(I2C0_V, I2C0, 0x1000, PTE_R | PTE_W);
+    kvmmap(I2C1_V, I2C1, 0x1000, PTE_R | PTE_W);
+    kvmmap(I2C2_V, I2C2, 0x1000, PTE_R | PTE_W);
+    
     // 映射内核段、只读
     kvmmap(KERNBASE, KERNBASE, (uint64)etext - KERNBASE, PTE_R | PTE_X);
 

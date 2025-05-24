@@ -15,6 +15,7 @@
 #ifndef _DRIVER_UTILS_H
 #define _DRIVER_UTILS_H
 
+#include "types.h"
 // #ifdef __cplusplus
 // #include <cstdbool>
 // #include <cstddef>

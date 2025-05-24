@@ -154,3 +154,15 @@ sys_trace(void)
   myproc()->tmask = mask;
   return 0;
 }
+
+uint64
+sys_i2c_write(void)
+{
+    printf("sys_i2c_write\n");
+//   int mask;
+//   if(argint(0, &mask) < 0) {
+//     return -1;
+//   }
+//   myproc()->tmask = mask;
+  return 0;
+}

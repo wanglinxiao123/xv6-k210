@@ -16,11 +16,10 @@
 #include "include/vm.h"
 #include "include/disk.h"
 #include "include/buf.h"
-#ifndef QEMU
 #include "include/sdcard.h"
 #include "include/fpioa.h"
 #include "include/dmac.h"
-#endif
+#include "include/i2c.h"
 
 // tp 保存 hartid
 static inline void inithartid(unsigned long hartid)
@@ -37,23 +36,31 @@ void main(unsigned long hartid, unsigned long dtb_pa)
     // 核心 0
     if (hartid == 0)
     {
-        consoleinit();    // 初始化控制台的自旋锁和读写回调函数
-        printfinit();     // 初始化 printf 用到的自旋锁
-        print_logo();     // 打印 LOGO
-        kinit();          // 初始化自旋锁，将空余空间回收到链表
-        kvminit();        // 初始化内核页表，映射外设地址、内核段、数据段、TRAMPOLINE
-        kvminithart();    // 刷新页表寄存器
-        timerinit();      // 初始化保护变量 ticks 的自旋锁
-        trapinithart();   // 设置 S 模式中断向量、启动 S 模式外部中断、软件中断、定时器中断，设置下次的定时时间
-        procinit();       // 初始化保护 PID 和每个 proc 的自旋锁
-        plicinit();       // 设置磁盘中断和串口中断的优先级
-        plicinithart();   // 启动 DISK_IRQ 和 UART_IRQ 中断
-        fpioa_pin_init(); // 设置对应的管脚功能为 SPI
-        dmac_init();      // 调用 SDK 初始化 DMA
-        disk_init();      // 初始化 SD 卡为 SPI 模式
-        binit();          // 构建双向环形链表，初始化每一个buf的睡眠锁
-        fileinit();       // 初始化文件描述符列表和自旋锁
-        userinit();       // 为 init 进程分配资源、映射物理页面到 pagetable 和 kpagetable
+        consoleinit();                           // 初始化控制台的自旋锁和读写回调函数
+        printfinit();                            // 初始化 printf 用到的自旋锁
+        print_logo();                            // 打印 LOGO
+        kinit();                                 // 初始化自旋锁，将空余空间回收到链表
+        kvminit();                               // 初始化内核页表，映射外设地址、内核段、数据段、TRAMPOLINE
+        kvminithart();                           // 刷新页表寄存器
+        timerinit();                             // 初始化保护变量 ticks 的自旋锁
+        trapinithart();                          // 设置 S 模式中断向量、启动 S 模式外部中断、软件中断、定时器中断，设置下次的定时时间
+        procinit();                              // 初始化保护 PID 和每个 proc 的自旋锁
+        plicinit();                              // 设置磁盘中断和串口中断的优先级
+        plicinithart();                          // 启动 DISK_IRQ 和 UART_IRQ 中断
+        fpioa_pin_init();                        // 设置对应的管脚为 SPI 和 I2C
+        dmac_init();                             // 调用 SDK 初始化 DMA
+        i2c_init(I2C_DEVICE_0, 0x3b, 7, 400000); // 初始化 I2C
+
+        // 尝试读取数据
+        uint8 send_buf[2] = {0x00, 0x00};
+        uint8 recv_buf[4];
+        i2c_recv_data_dma(DMAC_CHANNEL1, DMAC_CHANNEL2, I2C_DEVICE_0, send_buf, 2, recv_buf, 4);
+        printf("read reg ：%x%x%x%x", recv_buf[0], recv_buf[1], recv_buf[2], recv_buf[3]);
+
+        disk_init(); // 初始化 SD 卡为 SPI 模式
+        binit();     // 构建双向环形链表，初始化每一个buf的睡眠锁
+        fileinit();  // 初始化文件描述符列表和自旋锁
+        userinit();  // 为 init 进程分配资源、映射物理页面到 pagetable 和 kpagetable
         printf("hart 0 init done\n");
 
         // 向其他的核发送 IPI

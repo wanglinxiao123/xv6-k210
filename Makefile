@@ -49,6 +49,7 @@ OBJS += \
   $K/sdcard.o \
   $K/dmac.o \
   $K/sysctl.o \
+  $K/i2c.o \
 
 else
 OBJS += \
@@ -73,7 +74,7 @@ LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
-CFLAGS = -Wall -Werror -O0 -fno-omit-frame-pointer -ggdb -g -Wno-error=infinite-recursion
+CFLAGS = -Wall -Werror -O0 -fno-omit-frame-pointer -ggdb -g -Wno-error=infinite-recursion -Wno-error=unused-variable
 CFLAGS += -MD
 CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
@@ -204,10 +205,11 @@ UPROGS=\
 	$U/_usertests\
 	$U/_strace\
 	$U/_mv\
+	$U/_i2c_read\
 
 userprogs: $(UPROGS)
 
-dst=/mnt
+dst=/media/wlx/CA18-FDEC
 
 # @sudo cp $U/_init $(dst)/init
 # @sudo cp $U/_sh $(dst)/sh
@@ -232,7 +234,6 @@ sdcard: userprogs
 		sudo cp $$file $(dst)/bin/$${file#$U/_}; done
 	@sudo cp $U/_init $(dst)/init
 	@sudo cp $U/_sh $(dst)/sh
-	@sudo cp README $(dst)/README
 
 clean: 
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \

@@ -76,6 +76,10 @@
 #define SPI1                    0x53000000
 #define SPI2                    0x54000000
 #define SYSCTL                  0x50440000
+#define I2C0                    0x50280000
+#define I2C1                    0x50290000
+#define I2C2                    0x502A0000
+
 
 #define GPIOHS_V                (0x38001000 + VIRT_OFFSET)
 #define DMAC_V                  (0x50000000 + VIRT_OFFSET)
@@ -86,7 +90,9 @@
 #define SPI1_V                  (0x53000000 + VIRT_OFFSET)
 #define SPI2_V                  (0x54000000 + VIRT_OFFSET)
 #define SYSCTL_V                (0x50440000 + VIRT_OFFSET)
-
+#define I2C0_V                  (0x50280000 + VIRT_OFFSET)
+#define I2C1_V                  (0x50290000 + VIRT_OFFSET)
+#define I2C2_V                  (0x502A0000 + VIRT_OFFSET)
 
 #endif
 

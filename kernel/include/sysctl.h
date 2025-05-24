@@ -1062,7 +1062,7 @@ void sysctl_disable_irq(void);
  *
  * @return      The time of microsecond
  */
-uint64 sysctl_get_time_us(void);
+// uint64 sysctl_get_time_us(void);
 
 /**
  * @brief       Get reset status
@@ -1070,6 +1070,9 @@ uint64 sysctl_get_time_us(void);
  * @return      The status of reset
  */
 sysctl_reset_enum_status_t sysctl_get_reset_status(void);
+
+uint32 sysctl_clock_source_get_freq(sysctl_clock_source_t input);
+
 
 #ifdef __cplusplus
 }

@@ -3,6 +3,7 @@
 #include "include/riscv.h"
 #include "include/sysctl.h"
 #include "include/memlayout.h"
+#include "include/printf.h"
 
 volatile fpioa_t *const fpioa = (volatile fpioa_t *)FPIOA_V;
 
@@ -4760,7 +4761,7 @@ int fpioa_get_io_by_function(fpioa_function_t function)
     return -1;
 }
 
-// 设置对应的管脚为 SPI
+// 设置对应的管脚为 SPI 和 I2C
 void fpioa_pin_init()
 {
     fpioa_set_function(27, FUNC_SPI0_SCLK);
@@ -4768,4 +4769,6 @@ void fpioa_pin_init()
     fpioa_set_function(26, FUNC_SPI0_D1);
     fpioa_set_function(32, FUNC_GPIOHS7);
     fpioa_set_function(29, FUNC_SPI0_SS3);
+    fpioa_set_function(15, FUNC_I2C0_SCLK);
+    fpioa_set_function(16, FUNC_I2C0_SDA);
 }
