@@ -1,19 +1,9 @@
-platform	:= k210
-#platform	:= qemu
-# mode := debug
-mode := release
 K=kernel
 U=xv6-user
 T=target
 
-OBJS =
-ifeq ($(platform), k210)
-OBJS += $K/entry_k210.o
-else
-OBJS += $K/entry_qemu.o
-endif
-
-OBJS += \
+OBJS = \
+  $K/entry_k210.o \
   $K/printf.o \
   $K/kalloc.o \
   $K/intr.o \
@@ -38,10 +28,7 @@ OBJS += \
   $K/disk.o \
   $K/fat32.o \
   $K/plic.o \
-  $K/console.o
-
-ifeq ($(platform), k210)
-OBJS += \
+  $K/console.o \
   $K/spi.o \
   $K/gpiohs.o \
   $K/fpioa.o \
@@ -51,143 +38,7 @@ OBJS += \
   $K/sysctl.o \
   $K/i2c.o \
 
-else
-OBJS += \
-  $K/virtio_disk.o \
-  #$K/uart.o \
-
-endif
-
-QEMU = qemu-system-riscv64
-
-ifeq ($(platform), k210)
-RUSTSBI = ./bootloader/SBI/sbi-k210
-else
-RUSTSBI = ./bootloader/SBI/sbi-qemu
-endif
-
-TOOLPREFIX	:= riscv64-unknown-elf-
-#TOOLPREFIX	:= riscv64-linux-gnu-
-CC = $(TOOLPREFIX)gcc
-AS = $(TOOLPREFIX)gas
-LD = $(TOOLPREFIX)ld
-OBJCOPY = $(TOOLPREFIX)objcopy
-OBJDUMP = $(TOOLPREFIX)objdump
-
-CFLAGS = -Wall -Werror -O0 -fno-omit-frame-pointer -ggdb -g -Wno-error=infinite-recursion -Wno-error=unused-variable
-CFLAGS += -MD
-CFLAGS += -mcmodel=medany
-CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
-CFLAGS += -I.
-CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
-
-ifeq ($(mode), debug) 
-CFLAGS += -DDEBUG 
-endif 
-
-ifeq ($(platform), qemu)
-CFLAGS += -D QEMU
-endif
-
-LDFLAGS = -z max-page-size=4096
-
-ifeq ($(platform), k210)
-linker = ./linker/k210.ld
-endif
-
-ifeq ($(platform), qemu)
-linker = ./linker/qemu.ld
-endif
-
-# Compile Kernel
-$T/kernel: $(OBJS) $(linker) $U/initcode
-	@if [ ! -d "./target" ]; then mkdir target; fi
-	@$(LD) $(LDFLAGS) -T $(linker) -o $T/kernel $(OBJS)
-	@$(OBJDUMP) -S $T/kernel > $T/kernel.asm
-	@$(OBJDUMP) -t $T/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $T/kernel.sym
-  
-build: $T/kernel userprogs
-
-# Compile RustSBI
-RUSTSBI:
-ifeq ($(platform), k210)
-	@cd ./bootloader/SBI/rustsbi-k210 && cargo build && cp ./target/riscv64gc-unknown-none-elf/debug/rustsbi-k210 ../sbi-k210
-	@$(OBJDUMP) -S ./bootloader/SBI/sbi-k210 > $T/rustsbi-k210.asm
-else
-	@cd ./bootloader/SBI/rustsbi-qemu && cargo build && cp ./target/riscv64gc-unknown-none-elf/debug/rustsbi-qemu ../sbi-qemu
-	@$(OBJDUMP) -S ./bootloader/SBI/sbi-qemu > $T/rustsbi-qemu.asm
-endif
-
-rustsbi-clean:
-	@cd ./bootloader/SBI/rustsbi-k210 && cargo clean
-	@cd ./bootloader/SBI/rustsbi-qemu && cargo clean
-
-image = $T/kernel.bin
-k210 = $T/k210.bin
-k210-serialport := /dev/ttyUSB0
-
-ifndef CPUS
-CPUS := 2
-endif
-
-QEMUOPTS = -machine virt -kernel $T/kernel -m 8M -nographic
-
-# use multi-core 
-QEMUOPTS += -smp $(CPUS)
-
-QEMUOPTS += -bios $(RUSTSBI)
-
-# import virtual disk image
-QEMUOPTS += -drive file=fs.img,if=none,format=raw,id=x0 
-QEMUOPTS += -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
-
-run: build
-ifeq ($(platform), k210)
-	@$(OBJCOPY) $T/kernel --strip-all -O binary $(image)
-	@$(OBJCOPY) $(RUSTSBI) --strip-all -O binary $(k210)
-	@dd if=$(image) of=$(k210) bs=128k seek=1
-	@$(OBJDUMP) -D -b binary -m riscv $(k210) > $T/k210.asm
-	@sudo chmod 777 $(k210-serialport)
-	@python3 ./tools/kflash.py -p $(k210-serialport) -b 1500000 -t $(k210)
-else
-	@$(QEMU) $(QEMUOPTS)
-endif
-
-$U/initcode: $U/initcode.S
-	$(CC) $(CFLAGS) -march=rv64g -nostdinc -I. -Ikernel -c $U/initcode.S -o $U/initcode.o
-	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o $U/initcode.out $U/initcode.o
-	$(OBJCOPY) -S -O binary $U/initcode.out $U/initcode
-	$(OBJDUMP) -S $U/initcode.o > $U/initcode.asm
-
-tags: $(OBJS) _init
-	@etags *.S *.c
-
-ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o
-
-_%: %.o $(ULIB)
-	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
-	$(OBJDUMP) -S $@ > $*.asm
-	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
-
-$U/usys.S : $U/usys.pl
-	@perl $U/usys.pl > $U/usys.S
-
-$U/usys.o : $U/usys.S
-	$(CC) $(CFLAGS) -c -o $U/usys.o $U/usys.S
-
-$U/_forktest: $U/forktest.o $(ULIB)
-	# forktest has less library code linked in - needs to be small
-	# in order to be able to max out the proc table.
-	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
-	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
-
-# Prevent deletion of intermediate files, e.g. cat.o, after first build, so
-# that disk image changes after first build are persistent until clean.  More
-# details:
-# http://www.gnu.org/software/make/manual/html_node/Chained-Rules.html
-.PRECIOUS: %.o
-
-UPROGS=\
+UPROGS = \
 	$U/_init\
 	$U/_sh\
 	$U/_cat\
@@ -207,33 +58,96 @@ UPROGS=\
 	$U/_mv\
 	$U/_i2c_read\
 
+
+
+RUSTSBI = ./bootloader/SBI/sbi-k210
+
+TOOLPREFIX := riscv64-unknown-elf-
+CC = $(TOOLPREFIX)gcc
+AS = $(TOOLPREFIX)gas
+LD = $(TOOLPREFIX)ld
+OBJCOPY = $(TOOLPREFIX)objcopy
+OBJDUMP = $(TOOLPREFIX)objdump
+
+# 启动所有警告，将警告视为错误（除了 无限递归 和 未使用的变量）
+CFLAGS = -Wall -Werror -Wno-error=unused-variable
+# 添加头文件路径
+CFLAGS += -I.
+# 代码和数据可以位于任何位置
+CFLAGS += -mcmodel=medany
+# 设置开启调试
+CFLAGS += -O0 -fno-omit-frame-pointer -ggdb -g 
+# 禁止编译器优化
+CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
+# 警用编译器的栈保护机制
+CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
+
+# 目标文件的内存页大小为 4K
+LDFLAGS = -z max-page-size=4096
+
+image = $T/kernel.bin
+k210 = $T/k210.bin
+k210-serialport := /dev/ttyUSB0
+
+
+# 提取内核和 RUSTSBI 的纯二进制镜像
+# 拼接两个镜像
+# 将反汇编结果保存到 k210.asm
+# 调用 kflash.py 进行烧录
+run: build
+	@$(OBJCOPY) $T/kernel --strip-all -O binary $(image)
+	@$(OBJCOPY) $(RUSTSBI) --strip-all -O binary $(k210)
+	@dd if=$(image) of=$(k210) bs=128k seek=1
+	@$(OBJDUMP) -D -b binary -m riscv $(k210) > $T/k210.asm
+	@sudo chmod 777 $(k210-serialport)
+	@python3 ./tools/kflash.py -p $(k210-serialport) -b 1500000 -t $(k210)
+
+build: $T/kernel userprogs
+
+
+# 将可执行程序拷贝到 SD 卡
+sdcard: userprogs
+	@if [ ! -d "$(SD_DST)/bin" ]; then sudo mkdir $(SD_DST)/bin; fi
+	@for file in $$( ls $U/_* ); do \
+		sudo cp $$file $(SD_DST)/bin/$${file#$U/_}; done
+	@sudo cp $U/_init $(SD_DST)/init
+	@sudo cp $U/_sh $(SD_DST)/sh
+
+# 链接所有的 .o 文件，生成可执行文件 kernel
+# 将可执行文件 kernel 生成反汇编代码 kernel.asm
+# 将可执行文件 kernel 生成符号表 kernel.sym
+linker = ./linker/k210.ld
+$T/kernel: $(OBJS) $(linker) $U/initcode
+	@if [ ! -d "./target" ]; then mkdir target; fi
+	@$(LD) $(LDFLAGS) -T $(linker) -o $T/kernel $(OBJS)
+	@$(OBJDUMP) -S $T/kernel > $T/kernel.asm
+	@$(OBJDUMP) -t $T/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $T/kernel.sym
+  
 userprogs: $(UPROGS)
 
-dst=/media/wlx/CA18-FDEC
+# 构建用户态程序，并生成反汇编文件和符号表
+ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o
+_%: %.o $(ULIB)
+	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
+	$(OBJDUMP) -S $@ > $*.asm
+	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
 
-# @sudo cp $U/_init $(dst)/init
-# @sudo cp $U/_sh $(dst)/sh
-# Make fs image
-fs: $(UPROGS)
-	@if [ ! -f "fs.img" ]; then \
-		echo "making fs image..."; \
-		dd if=/dev/zero of=fs.img bs=512k count=512; \
-		mkfs.vfat -F 32 fs.img; fi
-	@sudo mount fs.img $(dst)
-	@if [ ! -d "$(dst)/bin" ]; then sudo mkdir $(dst)/bin; fi
-	@sudo cp README $(dst)/README
-	@for file in $$( ls $U/_* ); do \
-		sudo cp $$file $(dst)/$${file#$U/_};\
-		sudo cp $$file $(dst)/bin/$${file#$U/_}; done
-	@sudo umount $(dst)
 
-# Write mounted sdcard
-sdcard: userprogs
-	@if [ ! -d "$(dst)/bin" ]; then sudo mkdir $(dst)/bin; fi
-	@for file in $$( ls $U/_* ); do \
-		sudo cp $$file $(dst)/bin/$${file#$U/_}; done
-	@sudo cp $U/_init $(dst)/init
-	@sudo cp $U/_sh $(dst)/sh
+# 编译汇编代码 .s -> .o
+# 链接为可执行文件 .o -> .out
+# 从 ELF 提取二进制代码
+# 生成反汇编代码 initcode.o -> initcode.asm
+$U/initcode: $U/initcode.S
+	$(CC) $(CFLAGS) -march=rv64g -nostdinc -I. -Ikernel -c $U/initcode.S -o $U/initcode.o
+	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o $U/initcode.out $U/initcode.o
+	$(OBJCOPY) -S -O binary $U/initcode.out $U/initcode
+	$(OBJDUMP) -S $U/initcode.o > $U/initcode.asm
+
+# 生成用户态系统调用的汇编代码
+$U/usys.S : $U/usys.pl
+	@perl $U/usys.pl > $U/usys.S
+$U/usys.o : $U/usys.S
+	$(CC) $(CFLAGS) -c -o $U/usys.o $U/usys.S
 
 clean: 
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
@@ -244,3 +158,12 @@ clean:
 	.gdbinit \
 	$U/usys.S \
 	$(UPROGS)
+
+
+# 使用 cargo 编译 rustsbi
+RUSTSBI:
+	@cd ./bootloader/SBI/rustsbi-k210 && cargo build && cp ./target/riscv64gc-unknown-none-elf/debug/rustsbi-k210 ../sbi-k210
+	@$(OBJDUMP) -S ./bootloader/SBI/sbi-k210 > $T/rustsbi-k210.asm
+
+rustsbi-clean:
+	@cd ./bootloader/SBI/rustsbi-k210 && cargo clean

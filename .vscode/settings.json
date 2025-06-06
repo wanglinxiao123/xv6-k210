@@ -70,6 +70,22 @@
         "version": "c",
         "string.h": "c",
         "proc.h": "c",
-        "sdcard.h": "c"
+        "sdcard.h": "c",
+        "i2c.h": "c",
+        "stdlib.h": "c",
+        "fpioa.h": "c",
+        "sysctl.h": "c",
+        "utils.h": "c",
+        "platform.h": "c",
+        "kalloc.h": "c",
+        "dmac.h": "c",
+        "stddef.h": "c",
+        "syscall.h": "c",
+        "timer.h": "c",
+        "printf.h": "c",
+        "spinlock.h": "c",
+        "param.h": "c",
+        "sysinfo.h": "c",
+        "user.h": "c"
     }
 }

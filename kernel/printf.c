@@ -167,5 +167,5 @@ void backtrace()
 // 打印 LOGO
 void print_logo()
 {
-    printf("WELCOME TO XV6-K210 IMPROVE BY WANGLINXIAO\n");
+    printf("WELCOME TO XV6-K210 !!!!!\n");
 }
