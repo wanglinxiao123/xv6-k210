@@ -214,7 +214,8 @@ static void zero_clus(uint32 cluster)
     }
 }
 
-// 从 dev 中找到空闲簇，清零簇内容并记录在 FAT 表中
+// 遍历 FAT 表，找到空闲簇，在表中标记为已分配
+// 清除数据扇区中对应的簇
 static uint32 alloc_clus(uint8 dev)
 {
     struct buf *b;
@@ -305,6 +306,11 @@ static uint rw_clus(uint32 cluster, int write, int user, uint64 data, uint off, 
 
 // 根据文件偏移量 off 找到对应的簇号，并更新 entry->cur_clus 和 entry->clus_cnt
 // alloc = 1，在簇号不满足时进行分配
+
+// 找到目录项 entry 偏移 off 处的簇号
+// 如果 off > 当前总簇数，则向后拓展
+// 如果 off < 当前访问的簇数，则重新遍历
+// alloc = 1 则分配空间
 static int reloc_clus(struct dirent *entry, uint off, int alloc)
 {
     // 计算 off 对应的起始簇下标

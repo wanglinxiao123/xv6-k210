@@ -251,6 +251,7 @@ void uvminit(pagetable_t pagetable, pagetable_t kpagetable, uchar *src, uint sz)
 }
 
 // 将 pagetable 和 kpagetable 的大小从 oldsz 增长到 newsz
+// 分配页表的同时映射物理页
 uint64 uvmalloc(pagetable_t pagetable, pagetable_t kpagetable, uint64 oldsz, uint64 newsz)
 {
     char *mem;
@@ -291,7 +292,7 @@ uint64 uvmalloc(pagetable_t pagetable, pagetable_t kpagetable, uint64 oldsz, uin
 }
 
 // 将 pagetable 和 kpagetable 的大小从 oldsz 减小到 newsz
-// 释放物理页内存
+// 对于 kpagetable 只取消映射、对于 pagetable 取消映射且释放物理页面
 uint64 uvmdealloc(pagetable_t pagetable, pagetable_t kpagetable, uint64 oldsz, uint64 newsz)
 {
     if (newsz >= oldsz)
@@ -310,6 +311,7 @@ uint64 uvmdealloc(pagetable_t pagetable, pagetable_t kpagetable, uint64 oldsz, u
 }
 
 // 递归删除页表 pagetable 所占用的空间
+// 并不释放页表映射的物理页面
 void freewalk(pagetable_t pagetable)
 {
     for (int i = 0; i < 512; i++)
@@ -342,7 +344,7 @@ void uvmfree(pagetable_t pagetable, uint64 sz)
     freewalk(pagetable);
 }
 
-// 根据 (old, sz) 分配同样的物理页
+// 根据 (old, sz) 申请新的物理页，并填充同样的数据
 // 将这片物理页映射到页表 new 和 knew
 int uvmcopy(pagetable_t old, pagetable_t new, pagetable_t knew, uint64 sz)
 {

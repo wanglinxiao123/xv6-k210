@@ -107,6 +107,8 @@ int allocpid()
 
 // 找到 UNUSED 的进程 p
 // 为 p 分配用户页表和内核页表、内核堆栈
+// 用户页表映射 TRAMPOLINE 和 TRAPFRAME
+// 内核页表与原内核页表相同，但添加 VKSTACK 映射
 // 初始化 swich 对应的上下文
 static struct proc *allocproc(void)
 {
@@ -137,7 +139,7 @@ found:
     }
 
     // 为进程 p 创建一个新页表，映射 TRAMPOLINE 和 TRAPFRAME
-    // 为进程 p 创建一个唯一的的内核页表，与内核页表指向同样的值
+    // 为进程 p 创建一个唯一的的内核页表，与内核页表指向同样的值，并添加 VKSTACK 映射
     // 分配一个物理页，映射到 (kpt, VKSTACK, PGSIZE)
     if ((p->pagetable = proc_pagetable(p)) == NULL || (p->kpagetable = proc_kpagetable()) == NULL)
     {
@@ -157,6 +159,8 @@ found:
 }
 
 // 释放 p 占用的所有资源
+// p->trapframe、内核栈、内核页表本身
+// 用户页和其映射的物理空间
 static void freeproc(struct proc *p)
 {
     if (p->trapframe)
@@ -261,6 +265,7 @@ void userinit(void)
 }
 
 // 增长或收缩进程的 用户页表和内核页表
+// 对于 kpagetable 只取消映射、对于 pagetable 取消映射且释放物理页面
 int growproc(int n)
 {
     uint sz;
@@ -345,7 +350,10 @@ void reparent(struct proc *p)
     }
 }
 
-// 退出当前进程
+// 关闭文件描述符
+// 将 该进程的子进程 交由 init 进程管理
+// 调用 sched 进入调度器
+// 唤醒 initproc 和 该进程的父进程
 void exit(int status)
 {
     struct proc *p = myproc();

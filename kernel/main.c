@@ -29,7 +29,7 @@ static inline void inithartid(unsigned long hartid)
 
 volatile static int started = 0;
 
-void main(unsigned long hartid, unsigned long dtb_pa)
+void main(unsigned long hartid)
 {
     inithartid(hartid); // 将 hartid 保存到 tp 寄存器中
 

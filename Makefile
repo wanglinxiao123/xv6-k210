@@ -70,7 +70,7 @@ OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
 # 启动所有警告，将警告视为错误（除了 无限递归 和 未使用的变量）
-CFLAGS = -Wall -Werror -Wno-error=unused-variable
+CFLAGS = -Wall -Werror -Wno-error=unused-variable -Wno-error=infinite-recursion
 # 添加头文件路径
 CFLAGS += -I.
 # 代码和数据可以位于任何位置
@@ -104,7 +104,7 @@ run: build
 
 build: $T/kernel userprogs
 
-
+SD_DST = /media/wlx/9669-BAE1
 # 将可执行程序拷贝到 SD 卡
 sdcard: userprogs
 	@if [ ! -d "$(SD_DST)/bin" ]; then sudo mkdir $(SD_DST)/bin; fi
